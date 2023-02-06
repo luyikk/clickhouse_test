@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 use anyhow::Result;
@@ -47,10 +48,10 @@ static TPS:AtomicU64=AtomicU64::new(0);
 
 #[tokio::main]
 async fn main()->Result<()> {
-    let client = Client::default().with_user("default")
+    let client =Arc::new(Client::default().with_user("default")
         .with_password("a123123")
         .with_database("test")
-        .with_url("http://192.168.1.221:8123");
+        .with_url("http://192.168.1.221:8123"));
     //let mut table = client.insert("log_money_game_spin")?;
 
     // table.write(&LogMoneyGameSpin{
@@ -63,11 +64,18 @@ async fn main()->Result<()> {
 
     client.query("ALTER TABLE log_money_game_spin DELETE WHERE `time`!=0").execute().await?;
 
+    let cc=client.clone();
     tokio::spawn(async move{
         loop {
             let tps= TPS.swap(0,Ordering::Release);
-            println!("TPS:{tps}");
-            sleep(Duration::from_secs(1)).await
+
+            let start=Instant::now();
+            let count:i64= cc.query("select count(*) from log_money_game_spin")
+                .fetch_one().await.unwrap();
+
+            println!("每秒写入速度:{tps} 当前表数据量:{count}");
+            let sleep_time=(1000000000i128-start.elapsed().as_nanos() as i128).max(100000000);
+            sleep(Duration::from_nanos(sleep_time as u64)).await;
         }
     });
 
@@ -111,7 +119,7 @@ async fn main()->Result<()> {
     inserter.write(&x).await?;
 
 
-    for _ in 0..100000000 {
+    for _ in 0..1000000000 {
         inserter.write(&LogMoneyGameSpin {
             time: chrono::prelude::Utc::now().timestamp_nanos(),
             account_id: 1,
