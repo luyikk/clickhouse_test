@@ -66,7 +66,7 @@ async fn main() -> Result<()> {
     // table.end().await?;
 
     client
-        .query("ALTER TABLE log_money_game_spin2 DELETE WHERE `time`!=0")
+        .query("ALTER TABLE log_money_game_spin DELETE WHERE `time`!=0")
         .execute()
         .await?;
 
@@ -77,7 +77,7 @@ async fn main() -> Result<()> {
 
             let start = Instant::now();
             if let Ok(count)=cc
-                .query("select count(*) from log_money_game_spin2")
+                .query("select count(*) from log_money_game_spin")
                 .fetch_one::<i64>()
                 .await {
                 println!("每秒写入速度:{tps} 当前表数据量:{count}");
@@ -88,7 +88,7 @@ async fn main() -> Result<()> {
     });
 
     let mut inserter = client
-        .inserter("log_money_game_spin2")?
+        .inserter("log_money_game_spin")?
         .with_max_entries(5000)
         .with_period(Some(Duration::from_secs(10)));
 
@@ -163,7 +163,7 @@ async fn main() -> Result<()> {
         {
             println!("write:{}", err.to_string());
             inserter = client
-                .inserter("log_money_game_spin2")?
+                .inserter("log_money_game_spin")?
                 .with_max_entries(5000)
                 .with_period(Some(Duration::from_secs(10)));
         }
@@ -177,7 +177,7 @@ async fn main() -> Result<()> {
         if let Err(err) = inserter.commit().await {
             println!("{}", err.to_string());
             inserter = client
-                .inserter("log_money_game_spin2")?
+                .inserter("log_money_game_spin")?
                 .with_max_entries(5000)
                 .with_period(Some(Duration::from_secs(10)));
         } else {
@@ -188,7 +188,7 @@ async fn main() -> Result<()> {
     inserter.end().await?;
 
     client
-        .query("ALTER TABLE log_money_game_spin2 DELETE WHERE `time`!=0")
+        .query("ALTER TABLE log_money_game_spin DELETE WHERE `time`!=0")
         .execute()
         .await?;
 
